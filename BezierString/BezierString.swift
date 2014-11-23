@@ -1,5 +1,5 @@
 //
-//  BezierText.swift
+//  BezierString.swift
 //
 //  Created by Luka on 23. 11. 14.
 //  Copyright (c) 2014 lvnyk. All rights reserved.
@@ -7,7 +7,7 @@
 
 import UIKit
 
-class BezierText {
+class BezierString {
 	
 	let bezierPath: UIBezierPath
 	let samples: [(point: CGPoint, length: CGFloat, angle: CGFloat)]

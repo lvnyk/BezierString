@@ -1,5 +1,5 @@
 //
-//  RangeSplitter.swift
+//  RangeSampler.swift
 //
 //  Created by Luka on 22. 11. 14.
 //  Copyright (c) 2014 lvnyk. All rights reserved.
