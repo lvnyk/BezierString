@@ -7,7 +7,7 @@ Rendering NSAttributedStrings along arbitrary continuous UIBezierPaths
 
 ![alt joe](https://raw.githubusercontent.com/lvnyk/BezierString/master/where.png)
 
-### Create a bezier path and an attributed string
+#### 1. Create a bezier path and an attributed string
 
 	let bezierPath = UIBezierPath()
 	bezierPath.moveToPoint(CGPointMake(50, 50+150))
@@ -20,7 +20,7 @@ Rendering NSAttributedStrings along arbitrary continuous UIBezierPaths
 		])
 	
 
-### Use the BezierText class
+#### 2. Use the BezierText class
 	
 	let bezierText = BezierText(bezierPath: bezierPath)
 	
