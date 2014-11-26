@@ -167,9 +167,8 @@ class BezierString {
 		
 		if let imageSize = imageSize {
 			UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
-		} else { // something approximate ... assume the path is centered and has enough space on top and left to be able to accomodate the text
-			let bounds = CGPathGetPathBoundingBox(bezierPath.CGPath)
-			let imageSize = CGSizeMake(bounds.midX*2, bounds.midY*2)
+		} else {
+			let imageSize = self.sizeThatFits()
 			
 			if imageSize.width <= 0 || imageSize.height <= 0 {
 				return nil
@@ -184,5 +183,73 @@ class BezierString {
 		UIGraphicsEndImageContext()
 		
 		return image
+	}
+	
+	/// something approximate ... assume the path is centered and has enough space on top and left to be able to accomodate the text
+	func sizeThatFits() -> CGSize {
+		let bounds = CGPathGetPathBoundingBox(bezierPath.CGPath)
+		let imageSize = CGSizeMake(bounds.midX*2, bounds.midY*2)
+		
+		return imageSize
+	}
+}
+
+class UIBezierLabel: UILabel {
+	
+	/// set the UIBezierPath, BezierString gets automatically generated
+	var bezierPath: UIBezierPath? {
+		get {
+			return bezierString?.bezierPath
+		}
+		set {
+			if let path = newValue {
+				bezierString = BezierString(bezierPath: path)
+			} else {
+				bezierString = nil
+			}
+		}
+	}
+	
+	var bezierString: BezierString? {
+		didSet {
+			self.numberOfLines = 1
+		}
+	}
+
+	/// y offset offset above or below the centerline in units of line height, default is 0
+	var textPathOffset: CGFloat = 0
+	
+	
+	// .Justify doesn't work on UILabels
+	private var _textAlignment: NSTextAlignment = NSTextAlignment.Left
+	override var textAlignment: NSTextAlignment {
+		willSet {
+			_textAlignment = newValue
+		}
+	}
+	
+	override init(frame: CGRect) {
+		super.init(frame: frame)
+	}
+	
+	required init(coder aDecoder: NSCoder) {
+		super.init(coder: aDecoder)
+	}
+	
+	override func drawRect(rect: CGRect) {
+		if let bezierString = bezierString {
+			bezierString.drawAttributedString(self.attributedText, toContext: UIGraphicsGetCurrentContext(), align: _textAlignment, yOffset: textPathOffset)
+		} else {
+			super.drawRect(rect)
+		}
+	}
+	
+	/// works according to the dimensions of the bezier path, not the text
+	override func sizeThatFits(size: CGSize) -> CGSize {
+		if let bezierString = bezierString {
+			return bezierString.sizeThatFits()
+		}
+		
+		return super.sizeThatFits(size)
 	}
 }
