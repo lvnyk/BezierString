@@ -15,7 +15,7 @@ extension Range {
 	:param: sample returns a new sample at provided position
 	:param: newSampleRequired determines whether another split should be performed
 	
-	:returns: samples for each index in the range, with additional samples in between according to the rules provided by the :newSampleRequired:
+	:returns: samples for each index in the range, with additional samples in between according to the rules provided by the newSampleRequired
 	*/
 	
 	func generateSamples<T>(sample:(Double) -> T, newSampleRequired:([T], Int) -> Bool) -> [T] {

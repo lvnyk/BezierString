@@ -53,7 +53,7 @@ extension UIBezierPath {
 		var maxAmp:Float = 0
 		var idx1: vDSP_Length = 0, idx2: vDSP_Length = 0
 		
-		shape.strokeStart = 0 - 0.0002
+		shape.strokeStart = 0 - 0.0002 // TODO: sampling in the middle of the path might be a better option, test
 		shape.strokeEnd   = 0 + 0.0002
 		shape.renderInContext(ctx)
 		

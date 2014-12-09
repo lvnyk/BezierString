@@ -165,17 +165,13 @@ class BezierString {
 	*/
 	func imageWithAttributedString(string: NSAttributedString, imageSize: CGSize? = nil, align alignment:NSTextAlignment = .Center, yOffset:CGFloat = 0) -> UIImage? {
 		
-		if let imageSize = imageSize {
-			UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
-		} else {
-			let imageSize = self.sizeThatFits()
-			
-			if imageSize.width <= 0 || imageSize.height <= 0 {
-				return nil
-			}
-			
-			UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
+		let imageSize = imageSize ?? self.sizeThatFits()
+		
+		if imageSize.width <= 0 || imageSize.height <= 0 {
+			return nil
 		}
+		
+		UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
 		
 		self.drawAttributedString(string, toContext: UIGraphicsGetCurrentContext(), align: alignment, yOffset: yOffset)
 		

@@ -5,7 +5,7 @@ Rendering `NSAttributedStrings` along arbitrary continuous `UIBezierPaths`
 
 ## Example
 
-![alt joe](https://raw.githubusercontent.com/lvnyk/BezierString/master/where.png)
+![joe](https://raw.githubusercontent.com/lvnyk/BezierString/master/where.png)
 
 #### 1. Create a bezier path and an attributed string
 
