@@ -36,12 +36,12 @@ extension Range {
 	:returns: samples for each index in the range, with additional samples in between according to the rules provided by the newSampleRequired
 	*/
 	
-	func generateSamples<T>(sample:(Double) -> T, newSampleRequired:([T], Int) -> Bool) -> [T] {
+	func generateSamples<T>(sample:Double -> T, newSampleRequired:([T], Int) -> Bool) -> [T] {
 		
 		var values = [T]()
 		var i = 0
 
-		self.map { (j) -> () in
+		self.map { j -> () in
 			
 			var sampleAdd = true
 			var sampleAdded = true
@@ -60,7 +60,7 @@ extension Range {
 						levels = (levels<<6) | ((level&0b111)<<3) | (levelPrev&0b111)
 					}
 					
-					level = (max(level, levelPrev)+1)
+					level = max(level, levelPrev)+1
 					if level > 0 {
 						fraction -= pow(1/2.0, Double(level))
 					}

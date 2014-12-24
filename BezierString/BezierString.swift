@@ -37,7 +37,7 @@ class BezierString {
 		var prevPoint = (point: CGPointZero, length: CGFloat(0.0), angle: CGFloat(0.0))
 		var firstSample = true
 		self.samples = bezierPath.sample().map {
-			(p) -> (point: CGPoint, length: CGFloat, angle: CGFloat) in
+			p -> (point: CGPoint, length: CGFloat, angle: CGFloat) in
 			
 			if firstSample {
 				prevPoint.point = p
