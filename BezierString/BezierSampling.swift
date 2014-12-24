@@ -79,7 +79,7 @@ extension UIBezierPath {
 		let p2 = CGPointFromIndex(idx2)
 		
 		let dist = p1.distanceTo(p2)
-		let count = max(3, ceil(dist / 0.05 / 24)); // at least 3 samples or a sample every ~ 24px
+		let count = max(3, ceil(dist / 0.05 / 24)) // at least 3 samples or a sample every ~ 24px
 
 		// curve sampling
 		let sample = { (t: Double) -> CGPoint in

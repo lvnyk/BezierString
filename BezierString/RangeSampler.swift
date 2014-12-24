@@ -22,11 +22,8 @@ extension Range {
 		
 		var values = [T]()
 		var i = 0
-		
-		let from = self.startIndex as Int
-		let to = self.endIndex as Int
-		
-		for j in from..<to {
+
+		self.map { (j) -> () in
 			
 			var sampleAdd = true
 			var sampleAdded = true
@@ -51,7 +48,7 @@ extension Range {
 					}
 					
 					// insert new data point
-					let t = Double(j) + fraction
+					let t = Double(j as Int) + fraction
 					values.insert(sample(t), atIndex: i)
 					
 				} else {

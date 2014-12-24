@@ -172,19 +172,19 @@ extension CGFloat {
 
 extension CGRect {
 	var topLeft: CGPoint {
-		get { return CGPointMake(self.minX, self.minY); }
+		get { return CGPointMake(self.minX, self.minY) }
 	}
 	
 	var topRight: CGPoint {
-		get { return CGPointMake(self.maxX, self.minY); }
+		get { return CGPointMake(self.maxX, self.minY) }
 	}
 	
 	var bottomLeft: CGPoint {
-		get { return CGPointMake(self.minX, self.maxY); }
+		get { return CGPointMake(self.minX, self.maxY) }
 	}
 	
 	var bottomRight: CGPoint {
-		get { return CGPointMake(self.maxX, self.maxY); }
+		get { return CGPointMake(self.maxX, self.maxY) }
 	}
 }
 
