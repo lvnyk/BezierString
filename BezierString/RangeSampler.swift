@@ -66,7 +66,7 @@ extension Range {
 					}
 					
 					// insert new data point
-					let t = Double(j as Int) + fraction
+					let t = Double(j as! Int) + fraction
 					values.insert(sample(t), atIndex: i)
 					
 				} else {

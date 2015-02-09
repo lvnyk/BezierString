@@ -67,7 +67,7 @@ class BezierString {
 				let len1 = (samples[i].length-samples[i-1].length)/2
 				let len2 = (samples[i+1].length-samples[i].length)/2
 
-				var length = length - (samples[i-1].length + len1)
+				let length = length - (samples[i-1].length + len1)
 
 				let deltaAngle = arcFi(samples[i+1].angle, samples[i].angle)
 				let orientation = (compareAngles(samples[i+1].angle-CGFloat.Pi/2, samples[i+1].angle, samples[i].angle) > 0 ? -1 : 1)
@@ -121,27 +121,31 @@ class BezierString {
 		CGContextSetInterpolationQuality(context, kCGInterpolationHigh)
 			
 		var linePos: CGFloat = 0
-		var charSpacing: CGFloat = 0
-		var align = alignment
+		let charSpacing: CGFloat
+		let align: NSTextAlignment
 		
 		let stringLength = string.boundingRectWithSize(CGSizeMake(CGFloat.max, CGFloat.max), options: NSStringDrawingOptions.UsesFontLeading, context: nil).width
 		let spaceRemaining = samples.last!.length - stringLength
 		if spaceRemaining < 0 {
 			align = NSTextAlignment.Justified
+		} else {
+			align = alignment
 		}
 		
 		switch align {
 		case .Center:
 			linePos = spaceRemaining / 2
+			charSpacing = 0
 		case .Right:
 			linePos = spaceRemaining
+			charSpacing = 0
 		case .Justified:
 			charSpacing = spaceRemaining / CGFloat(max(2,string.length-1))
 			if string.length==1 {
 				linePos = charSpacing
 			}
-			
-		default: break
+		default:
+			charSpacing = 0
 		}
 		
 		for var i=0; i<string.length; i++ {
