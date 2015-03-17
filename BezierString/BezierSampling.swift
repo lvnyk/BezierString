@@ -56,7 +56,7 @@ extension UIBezierPath {
 		
 		// context
 		let colorSpace = CGColorSpaceCreateDeviceGray()
-		let ctx = CGBitmapContextCreate(nil, w, h, 8, w, colorSpace, CGBitmapInfo(CGImageAlphaInfo.Only.rawValue))
+		let ctx = CGBitmapContextCreate(nil, Int(w), Int(h), 8, Int(w), colorSpace, CGBitmapInfo(CGImageAlphaInfo.Only.rawValue))
 		
 		CGContextTranslateCTM(ctx, CGFloat(d), CGFloat(d))
 		CGContextScaleCTM(ctx, scale, scale)
@@ -64,7 +64,7 @@ extension UIBezierPath {
 		
 		// data
 		let data  = UnsafeMutablePointer<UInt8>(CGBitmapContextGetData(ctx))
-		let fData = UnsafeMutablePointer<Float>(malloc(UInt(sizeof(Float))*w*h)) // float data
+		let fData = UnsafeMutablePointer<Float>(malloc(sizeof(Float)*Int(w*h))) // float data
 		
 		// get a distance between 2 points, ~5% of the total length apart, to get an estimation for the number of samples required
 		
