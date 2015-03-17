@@ -127,9 +127,9 @@ class BezierString {
 		let charSpacing: CGFloat
 		let align: NSTextAlignment
 		
-		var ascent = UnsafeMutablePointer<CGFloat>(malloc((sizeof(CGFloat)*2)))
-		let stringLength = CGFloat(CTLineGetTypographicBounds(line, &ascent[0], &ascent[1], nil))
-		let height = ascent[0]-ascent[1]
+		var ascent = UnsafeMutablePointer<CGFloat>(malloc((sizeof(CGFloat)*3)))
+		let stringLength = CGFloat(CTLineGetTypographicBounds(line, &ascent[0], &ascent[1], &ascent[2]))
+		let height = ascent[0]-ascent[1]*2+ascent[2]*2
 		free(ascent)
 		
 		let spaceRemaining = samples.last!.length - stringLength
