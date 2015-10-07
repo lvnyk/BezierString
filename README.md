@@ -15,8 +15,8 @@ Rendering `NSAttributedStrings` along arbitrary continuous `UIBezierPaths`
 	bezierPath.addCurveToPoint(CGPointMake(50+400, 50+150), controlPoint1: CGPointMake(50+300, 50), controlPoint2: CGPointMake(50+400-10, 50+75))
 	
 	let attributedString = NSAttributedString(string: "Where did you come from, where did you go?", attributes: [
-		kCTFontAttributeName: CTFontCreateWithName("HelveticaNeue-UltraLight", 26, nil),
-		kCTForegroundColorAttributeName: UIColor.redColor().CGColor
+		NSFontAttributeName: UIFont(name: "HelveticaNeue-UltraLight", size: 60) ?? UIFont.systemFontOfSize(30),
+		NSForegroundColorAttributeName: UIColor.redColor()
 		])
 	
 
@@ -41,3 +41,8 @@ Alternatively, in place of `UILabel`, use a `UIBezierLabel` instance, assign a `
 	label.textAlignment = .Center
 	label.text = "Where did you come from, where did you go?"
 	label.sizeToFit()
+
+## Requirements
+	
+- Xcode 7.0+
+- iOS 7.0+

@@ -27,13 +27,13 @@ import Foundation
 
 extension Range {
 	
-	/** 
+	/**
 	Generates a sample for each index in the range
 	
-	:param: sample returns a new sample at provided position
-	:param: newSampleRequired determines whether another split should be performed
+	- parameter sample: returns a new sample at provided position
+	- parameter newSampleRequired: determines whether another split should be performed
 	
-	:returns: samples for each index in the range, with additional samples in between according to the rules provided by the newSampleRequired
+	- returns: samples for each index in the range, with additional samples in between according to the rules provided by the newSampleRequired
 	*/
 	
 	func generateSamples<T>(sample:Double -> T, newSampleRequired:([T], Int) -> Bool) -> [T] {
@@ -41,7 +41,7 @@ extension Range {
 		var values = [T]()
 		var i = 0
 
-		self.map { j -> () in
+		self.forEach { j in
 			
 			var sampleAdd = true
 			var sampleAdded = true
@@ -52,7 +52,7 @@ extension Range {
 			var level = -1
 			var levels = 0
 			
-			do {
+			repeat {
 				
 				if sampleAdd {
 					

@@ -16,7 +16,7 @@ for j in 0...3 {
 	var level = -1
 	var levels = 0
 	
-	do {
+	repeat {
 		
 		if sampleAdd {
 			

@@ -33,7 +33,7 @@ func +(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
 
 func +=(inout lhs: CGPoint, rhs: CGPoint) {
 	lhs.x += rhs.x
-	lhs.y += rhs.x
+	lhs.y += rhs.y
 }
 
 func -(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
@@ -42,7 +42,7 @@ func -(lhs: CGPoint, rhs: CGPoint) -> CGPoint {
 
 func -=(inout lhs: CGPoint, rhs: CGPoint) {
 	lhs.x -= rhs.x
-	lhs.y -= rhs.x
+	lhs.y -= rhs.y
 }
 
 func *(lhs: CGPoint, rhs: CGFloat) -> CGPoint {
@@ -90,6 +90,10 @@ func *(lhs: CGFloat, rhs: CGSize) -> CGSize {
 	return CGSizeMake(rhs.width*lhs, rhs.height*lhs)
 }
 
+func *(lhs: CGSize, rhs: CGFloat) -> CGSize {
+	return CGSizeMake(lhs.width*rhs, lhs.height*rhs)
+}
+
 func *=(inout lhs: CGSize, rhs: CGFloat) {
 	lhs.width *= rhs
 	lhs.height *= rhs
@@ -135,6 +139,22 @@ func /=(inout lhs: CGRect, rhs: CGFloat) {
 	lhs.size.height /= rhs
 }
 
+func +(lhs: CGRect, rhs: CGPoint) -> CGRect {
+	return CGRectOffset(lhs, rhs.x, rhs.y)
+}
+
+func -(lhs: CGRect, rhs: CGPoint) -> CGRect {
+	return CGRectOffset(lhs, -rhs.x, -rhs.y)
+}
+
+func +(lhs: CGRect, rhs: CGSize) -> CGRect {
+	return CGRectMake(lhs.origin.x, lhs.origin.y, lhs.size.width+rhs.width, lhs.size.height+rhs.height)
+}
+
+func -(lhs: CGRect, rhs: CGSize) -> CGRect {
+	return CGRectMake(lhs.origin.x, lhs.origin.y, lhs.size.width-rhs.width, lhs.size.height-rhs.height)
+}
+
 // MARK: - helpers
 
 /// Determines whether the second vector is above > 0 or below < 0 the first one
@@ -155,12 +175,12 @@ func arcFi( fi1: CGFloat, fi2: CGFloat ) -> CGFloat {
 
 /// whether fi2 is larger than fi1 in reference to the ref angle
 func compareAngles( ref: CGFloat, fi1: CGFloat, fi2: CGFloat ) -> CGFloat {
-	return -arcFi(ref, fi1)+arcFi(ref, fi2)
+	return -arcFi(ref, fi2: fi1)+arcFi(ref, fi2: fi2)
 }
 
 // reasonable time issues blahblah
 //func lineIntersection( segmentStart p1:CGPoint, segmentEnd p2:CGPoint, lineStart p3:CGPoint, lineEnd p4:CGPoint, insideSegment: Bool = true ) -> CGPoint? {
-//	
+//
 //	let parallel = CGFloat(p1.x-p2.x)*CGFloat(p3.y-p4.y) - CGFloat(p1.y-p2.y)*CGFloat(p3.x-p4.x) == 0
 //
 //	if parallel == false {
@@ -171,14 +191,14 @@ func compareAngles( ref: CGFloat, fi1: CGFloat, fi2: CGFloat ) -> CGFloat {
 //
 //		let u = p2.x == p1.x ? 0 : (intersection.x - p1.x) / (p2.x - p1.x)
 //		let v = p2.y == p1.y ? 0 : (intersection.y - p1.y) / (p2.y - p1.y)
-//		
+//
 //		if insideSegment && ( u < 0 || u > 1 || v < 0 || v > 1 ) {
 //			return nil
 //		}
-//		
+//
 //		return intersection
 //	}
-//	
+//
 //	return nil
 //}
 
@@ -186,6 +206,12 @@ func compareAngles( ref: CGFloat, fi1: CGFloat, fi2: CGFloat ) -> CGFloat {
 
 extension CGFloat {
 	static let Pi = CGFloat(M_PI)
+	
+	static func random(d:CGFloat = 1) -> CGFloat {
+		
+		return CGFloat(arc4random())/CGFloat(UInt32.max) * d
+		
+	}
 }
 
 extension CGRect {
@@ -203,6 +229,10 @@ extension CGRect {
 	
 	var bottomRight: CGPoint {
 		get { return CGPointMake(self.maxX, self.maxY) }
+	}
+	
+	var center: CGPoint {
+		get { return CGPointMake(self.midX, self.midY) }
 	}
 }
 
