@@ -1,3 +1,6 @@
+## This is a work in progress of version 3.0
+
+
 BezierString
 ============
 
@@ -20,15 +23,15 @@ Rendering `NSAttributedStrings` along arbitrary continuous `UIBezierPaths`
 		])
 	
 
-#### 2. Use the BezierString class
+#### 2. Use the BezierPath
 	
-	let bezierString = BezierString(bezierPath: bezierPath)
+	let bezier = BezierPath(path: bezierPath)
 	
 	// generate an image
-	let img:UIImage! = bezierString.imageWithAttributedString(attributedString)	
+	let img:UIImage! = bezier.imageWithAttributedString(attributedString)	
 
 	// or render onto a preexisting context
-	bezierString.drawAttributedString(attributedString, toContext: UIGraphicsGetCurrentContext())
+	bezier.drawAttributedString(attributedString, toContext: UIGraphicsGetCurrentContext())
 
 #### UIBezierLabel
 Alternatively, in place of `UILabel`, use a `UIBezierLabel` instance, assign a `bezierString` or `bezierPath` and use as a normal `UILabel`

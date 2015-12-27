@@ -25,72 +25,8 @@
 
 import UIKit
 
-class BezierString {
-	
-	let bezierPath: UIBezierPath
-	let samples: [(point: CGPoint, length: CGFloat, angle: CGFloat)]
-	
-	init( bezierPath: UIBezierPath ) {
-		
-		self.bezierPath = bezierPath
-		
-		var prevPoint = (point: CGPointZero, length: CGFloat(0.0), angle: CGFloat(0.0))
-		var firstSample = true
-		self.samples = bezierPath.sample().map {
-			p -> (point: CGPoint, length: CGFloat, angle: CGFloat) in
-			
-			if firstSample {
-				prevPoint.point = p
-				firstSample = false
-			}
-			prevPoint.length += p.distanceTo(prevPoint.point)
-			prevPoint.angle = atan2(p.y-prevPoint.point.y, p.x-prevPoint.point.x)
-			prevPoint.point = p
-			
-			return prevPoint
-		}
-	}
-	
-	// MARK: -
-	
-	private func angleAtLength(length: CGFloat) -> CGFloat {
-		
-		for var i=1; i<samples.count; i++ {
-			
-			if length < samples[i].length || i==samples.count-1 {
-				
-				if length < samples[i-1].length + (samples[i].length-samples[i-1].length)/2 { i-- }
-				
-				if i == 0 { return samples[1].angle }
-				if i >= samples.count-1 { return samples.last!.angle }
-
-				let len1 = (samples[i].length-samples[i-1].length)/2
-				let len2 = (samples[i+1].length-samples[i].length)/2
-
-				let length = length - (samples[i-1].length + len1)
-
-				let deltaAngle = arcFi(samples[i+1].angle, fi2: samples[i].angle)
-				let orientation = compareAngles(samples[i+1].angle-CGFloat.Pi/2, fi1: samples[i+1].angle, fi2: samples[i].angle) > 0 ? -1 : 1
-				
-				return samples[i].angle + deltaAngle * CGFloat(orientation) * (min(1, length/len1) + max(0, (length-len1)/len2)) / 2
-			}
-		}
-		
-		return 0
-	}
-	
-	private func pointAtLength(length: CGFloat) -> CGPoint {
-		for var i=1; i<samples.count; i++ {
-			if length < samples[i].length || i==samples.count-1 {
-				let length = length - samples[i-1].length
-				
-				return samples[i-1].point + (samples[i].point-samples[i-1].point) * (length / (samples[i].length - samples[i-1].length))
-			}
-		}
-		
-		return CGPointZero
-	}
-	
+/// Text rendering extension
+extension BezierPath {
 	
 	// MARK: -
 	
@@ -104,7 +40,7 @@ class BezierString {
 	*/
 	func drawAttributedString(string: NSAttributedString, toContext context:CGContextRef, align alignment:NSTextAlignment = .Center, yOffset:CGFloat = 0, fitWidth:Bool = false) {
 		
-		guard let lastSample = samples.last else { return }
+		let pathLength = self.length()
 		
 		CGContextSaveGState(context)
 		
@@ -129,21 +65,20 @@ class BezierString {
 		let charSpacing: CGFloat
 		let align: NSTextAlignment
 		
-		let ascent = UnsafeMutablePointer<CGFloat>(malloc((sizeof(CGFloat)*3)))
+		var ascent = Array(count: 3, repeatedValue: CGFloat(0))
 		let stringWidth = CGFloat(CTLineGetTypographicBounds(line, &ascent[0], &ascent[1], &ascent[2]))
 		let height = ascent[0]-ascent[1]*2+ascent[2]*2
-		free(ascent)
 		
 		let scale: CGFloat
 		let spaceRemaining: CGFloat
-		if fitWidth && lastSample.length < stringWidth {
+		if fitWidth && pathLength < stringWidth {
 			spaceRemaining = 0
-			scale = min(1, lastSample.length / stringWidth)
+			scale = min(1, pathLength / stringWidth)
 		} else {
-			spaceRemaining = lastSample.length - stringWidth
+			spaceRemaining = pathLength - stringWidth
 			scale = 1
 		}
-
+		
 		if spaceRemaining < 0 {
 			align = NSTextAlignment.Justified
 		} else {
@@ -169,43 +104,42 @@ class BezierString {
 		var glyphOffset:CGFloat = 0
 		
 		for r in 0..<CFArrayGetCount(runs) {
-	
+			
 			let run = unsafeBitCast(CFArrayGetValueAtIndex(runs, r), CTRunRef.self)
 			let runCount = CTRunGetGlyphCount(run)
 			
-			let advances = UnsafeMutablePointer<CGSize>(malloc((sizeof(CGSize))*runCount))
+			var advances = Array(count: runCount, repeatedValue: CGSizeZero)
+			CTRunGetAdvances(run, CFRangeMake(0, runCount), &advances)
 			
-			CTRunGetAdvances(run, CFRangeMake(0, runCount), advances)
-			
-			for var i=0; i<runCount; i++ {
-			
-				let position = self.pointAtLength(linePos + advances[i].width/2)
-				let rotation = self.angleAtLength(linePos + advances[i].width/2)
+			for (i, advance) in advances.enumerate() {
+				
+				let width = advance.width
+				let length = linePos + width/2
+				
+				guard let p = self.propertiesAt(length) else { break }
 				
 				let textTransform = CGAffineTransformConcat(CGAffineTransformMakeScale(1, -1),
 					CGAffineTransformConcat(
-						CGAffineTransformMakeTranslation(-glyphOffset-advances[i].width/2/scale, height*(0.5+yOffset)),
+						CGAffineTransformMakeTranslation(-glyphOffset-width/2/scale, height*(0.5+yOffset)),
 						CGAffineTransformConcat(
 							CGAffineTransformMakeScale(scale, scale),
 							CGAffineTransformConcat(
-								CGAffineTransformMakeRotation(rotation),
-								CGAffineTransformMakeTranslation(position.x, position.y)
+								CGAffineTransformMakeRotation(p.normal),
+								CGAffineTransformMakeTranslation(p.position.x, p.position.y)
 							) ) ) )
 				
 				CGContextSetTextMatrix(context, textTransform)
 				
 				CTRunDraw(run, context, CFRangeMake(i, 1))
 				
-				glyphOffset += advances[i].width
-				linePos += (charSpacing + advances[i].width) * scale
+				glyphOffset += width
+				linePos += (charSpacing + width) * scale
 			}
-			
-			free(advances)
 		}
 		
 		CGContextRestoreGState(context)
 	}
-
+	
 	/**
 	Generates an image containing the string following the bezier path
 	
@@ -237,30 +171,32 @@ class BezierString {
 	
 	/// something approximate ... assume the path is centered and has enough space on top and left to be able to accomodate the text
 	func sizeThatFits() -> CGSize {
-		let bounds = CGPathGetPathBoundingBox(bezierPath.CGPath)
+		let bounds = CGPathGetPathBoundingBox(path.CGPath)
 		let imageSize = CGSizeMake(bounds.midX*2, bounds.midY*2)
 		
 		return imageSize
 	}
 }
 
+// MARK: - Label
+
 class UIBezierLabel: UILabel {
 	
-	/// set the UIBezierPath, BezierString gets automatically generated
+	/// set the UIBezierPath, BezierPath gets automatically generated
 	var bezierPath: UIBezierPath? {
 		get {
-			return bezierString?.bezierPath
+			return bezier?.path
 		}
 		set {
 			if let path = newValue {
-				bezierString = BezierString(bezierPath: path)
+				bezier = BezierPath(path: path)
 			} else {
-				bezierString = nil
+				bezier = nil
 			}
 		}
 	}
 	
-	var bezierString: BezierString? {
+	var bezier: BezierPath? {
 		didSet {
 			self.numberOfLines = 1
 		}
@@ -287,8 +223,8 @@ class UIBezierLabel: UILabel {
 	}
 	
 	override func drawRect(rect: CGRect) {
-		if let bezierString = bezierString, text = self.attributedText, ctx = UIGraphicsGetCurrentContext() {
-			bezierString.drawAttributedString(text, toContext: ctx, align: _textAlignment, yOffset: textPathOffset, fitWidth: adjustsFontSizeToFitWidth)
+		if let bezier = bezier, text = self.attributedText, ctx = UIGraphicsGetCurrentContext() {
+			bezier.drawAttributedString(text, toContext: ctx, align: _textAlignment, yOffset: textPathOffset, fitWidth: adjustsFontSizeToFitWidth)
 		} else {
 			super.drawRect(rect)
 		}
@@ -296,8 +232,8 @@ class UIBezierLabel: UILabel {
 	
 	/// works according to the dimensions of the bezier path, not the text
 	override func sizeThatFits(size: CGSize) -> CGSize {
-		if let bezierString = bezierString {
-			return bezierString.sizeThatFits()
+		if let bezier = bezier {
+			return bezier.sizeThatFits()
 		}
 		
 		return super.sizeThatFits(size)

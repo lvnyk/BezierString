@@ -67,6 +67,56 @@ func /=(inout lhs: CGPoint, rhs: CGFloat) {
 	lhs.y /= rhs
 }
 
+func +(lhs: CGPoint, rhs: CGVector) -> CGPoint {
+	return CGPointMake(lhs.x+rhs.dx, lhs.y+rhs.dy)
+}
+
+func -(lhs: CGPoint, rhs: CGVector) -> CGPoint {
+	return CGPointMake(lhs.x-rhs.dx, lhs.y-rhs.dy)
+}
+
+
+// MARK: CGVector
+func +(lhs: CGVector, rhs: CGVector) -> CGVector {
+	return CGVectorMake(lhs.dx+rhs.dx, lhs.dy+rhs.dy)
+}
+
+func +=(inout lhs: CGVector, rhs: CGVector) {
+	lhs.dx += rhs.dx
+	lhs.dy += rhs.dy
+}
+
+func -(lhs: CGVector, rhs: CGVector) -> CGVector {
+	return CGVectorMake(lhs.dx-rhs.dx, lhs.dy-rhs.dy)
+}
+
+func -=(inout lhs: CGVector, rhs: CGVector) {
+	lhs.dx -= rhs.dx
+	lhs.dy -= rhs.dy
+}
+
+func *(lhs: CGVector, rhs: CGFloat) -> CGVector {
+	return CGVectorMake(lhs.dx*rhs, lhs.dy*rhs)
+}
+
+func *=(inout lhs: CGVector, rhs: CGFloat) {
+	lhs.dx *= rhs
+	lhs.dy *= rhs
+}
+
+func *(lhs: CGFloat, rhs: CGVector) -> CGVector {
+	return CGVectorMake(rhs.dx*lhs, rhs.dy*lhs)
+}
+
+func /(lhs: CGVector, rhs: CGFloat) -> CGVector {
+	return CGVectorMake(lhs.dx/rhs, lhs.dy/rhs)
+}
+
+func /=(inout lhs: CGVector, rhs: CGFloat) {
+	lhs.dx /= rhs
+	lhs.dy /= rhs
+}
+
 // MARK: CGSize
 func +(lhs: CGSize, rhs: CGSize) -> CGSize {
 	return CGSizeMake(lhs.width+rhs.width, lhs.height+rhs.height)
@@ -178,29 +228,50 @@ func compareAngles( ref: CGFloat, fi1: CGFloat, fi2: CGFloat ) -> CGFloat {
 	return -arcFi(ref, fi2: fi1)+arcFi(ref, fi2: fi2)
 }
 
-// reasonable time issues blahblah
-//func lineIntersection( segmentStart p1:CGPoint, segmentEnd p2:CGPoint, lineStart p3:CGPoint, lineEnd p4:CGPoint, insideSegment: Bool = true ) -> CGPoint? {
-//
-//	let parallel = CGFloat(p1.x-p2.x)*CGFloat(p3.y-p4.y) - CGFloat(p1.y-p2.y)*CGFloat(p3.x-p4.x) == 0
-//
-//	if parallel == false {
-//		let intersection = CGPointMake(
-//			((CGFloat(p1.x*p2.y) - CGFloat(p1.y*p2.x))*CGFloat(p3.x-p4.x) - CGFloat(p1.x-p2.x)*(CGFloat(p3.x*p4.y) - CGFloat(p3.y*p4.x))) / (CGFloat(p1.x-p2.x)*CGFloat(p3.y-p4.y) - CGFloat(p1.y - p2.y)*CGFloat(p3.x-p4.x)),
-//			((CGFloat(p1.x*p2.y) - CGFloat(p1.y*p2.x))*CGFloat(p3.y-p4.y) - CGFloat(p1.y-p2.y)*(CGFloat(p3.x*p4.y) - CGFloat(p3.y*p4.x))) / (CGFloat(p1.x-p2.x)*CGFloat(p3.y-p4.y) - CGFloat(p1.y - p2.y)*CGFloat(p3.x-p4.x))
-//		)
-//
-//		let u = p2.x == p1.x ? 0 : (intersection.x - p1.x) / (p2.x - p1.x)
-//		let v = p2.y == p1.y ? 0 : (intersection.y - p1.y) / (p2.y - p1.y)
-//
-//		if insideSegment && ( u < 0 || u > 1 || v < 0 || v > 1 ) {
-//			return nil
-//		}
-//
-//		return intersection
-//	}
-//
-//	return nil
-//}
+/// intersection
+
+func lineIntersection( segmentStart p1:CGPoint, segmentEnd p2:CGPoint,
+	lineStart p3:CGPoint, lineEnd p4:CGPoint,
+	insideSegment: Bool = true, lineIsSegment: Bool = false, hardUpperLimit: Bool = false ) -> CGPoint? {
+		
+		let parallel = CGFloat(p1.x-p2.x)*CGFloat(p3.y-p4.y) - CGFloat(p1.y-p2.y)*CGFloat(p3.x-p4.x) == 0
+		
+		if parallel == false {
+			let intersection = CGPointMake(
+				((CGFloat(p1.x*p2.y) - CGFloat(p1.y*p2.x))*CGFloat(p3.x-p4.x) - CGFloat(p1.x-p2.x)*(CGFloat(p3.x*p4.y) - CGFloat(p3.y*p4.x))) / (CGFloat(p1.x-p2.x)*CGFloat(p3.y-p4.y) - CGFloat(p1.y - p2.y)*CGFloat(p3.x-p4.x)),
+				((CGFloat(p1.x*p2.y) - CGFloat(p1.y*p2.x))*CGFloat(p3.y-p4.y) - CGFloat(p1.y-p2.y)*(CGFloat(p3.x*p4.y) - CGFloat(p3.y*p4.x))) / (CGFloat(p1.x-p2.x)*CGFloat(p3.y-p4.y) - CGFloat(p1.y - p2.y)*CGFloat(p3.x-p4.x))
+			)
+			
+			
+			if insideSegment {
+				let u = p2.x == p1.x ? 0 : (intersection.x - p1.x) / (p2.x - p1.x)
+				let v = p2.y == p1.y ? 0 : (intersection.y - p1.y) / (p2.y - p1.y)
+				
+				if u<0 || v<0 || v>1 || u>1 || hardUpperLimit && (v>=1 || u>=1) {
+					return nil
+				}
+				
+				if lineIsSegment {
+					let w = p4.x == p3.x ? 0 : (intersection.y - p3.x) / (p4.x - p3.x)
+					let x = p4.y == p3.y ? 0 : (intersection.y - p3.y) / (p4.y - p3.y)
+					
+					if w<0 || x<0 || w>1 || x>1 || hardUpperLimit && (w>=1 || x>=1) {
+						return nil
+					}
+				}
+			}
+			
+			return intersection
+		}
+		
+		return nil
+}
+
+
+func segmentsIntersection(segment1: (CGPoint, CGPoint), _ segment2: (CGPoint, CGPoint)) -> CGPoint? {
+	return lineIntersection(segmentStart: segment1.0, segmentEnd: segment1.1, lineStart: segment2.0, lineEnd: segment2.1,
+		insideSegment: true, lineIsSegment: true, hardUpperLimit: true)
+}
 
 // MARK: - extensions
 
@@ -216,23 +287,39 @@ extension CGFloat {
 
 extension CGRect {
 	var topLeft: CGPoint {
-		get { return CGPointMake(self.minX, self.minY) }
+		return CGPointMake(self.minX, self.minY)
 	}
 	
 	var topRight: CGPoint {
-		get { return CGPointMake(self.maxX, self.minY) }
+		return CGPointMake(self.maxX, self.minY)
 	}
 	
 	var bottomLeft: CGPoint {
-		get { return CGPointMake(self.minX, self.maxY) }
+		return CGPointMake(self.minX, self.maxY)
 	}
 	
 	var bottomRight: CGPoint {
-		get { return CGPointMake(self.maxX, self.maxY) }
+		return CGPointMake(self.maxX, self.maxY)
+	}
+	
+	var topMiddle: CGPoint {
+		return CGPointMake(self.midX, self.minY)
+	}
+	
+	var bottomMiddle: CGPoint {
+		return CGPointMake(self.midX, self.maxY)
+	}
+	
+	var middleLeft: CGPoint {
+		return CGPointMake(self.minY, self.midY)
+	}
+	
+	var middleRight: CGPoint {
+		return CGPointMake(self.maxY, self.midY)
 	}
 	
 	var center: CGPoint {
-		get { return CGPointMake(self.midX, self.midY) }
+		return CGPointMake(self.midX, self.midY)
 	}
 }
 
@@ -250,4 +337,25 @@ extension CGPoint {
 		self.x = round(self.x)
 		self.y = round(self.y)
 	}
+}
+
+extension CGVector {
+	
+	init(point: CGPoint) {
+		self.dx = point.x
+		self.dy = point.y
+	}
+	
+	var length: CGFloat {
+		return sqrt(self.dx*self.dx+self.dy*self.dy)
+	}
+}
+
+extension CGPoint {
+	
+	init(vector: CGVector) {
+		self.x = vector.dx
+		self.y = vector.dy
+	}
+	
 }
