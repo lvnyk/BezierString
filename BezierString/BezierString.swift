@@ -25,10 +25,10 @@
 
 import UIKit
 
+// MARK: Rendering
+
 /// Text rendering extension
-extension BezierPath {
-	
-	// MARK: -
+extension Bezier {
 	
 	/**
 	Adds the string to the provided context, following the bezier path
@@ -38,7 +38,7 @@ extension BezierPath {
 	- parameter align: text alignment, default is .Center
 	- parameter yOffset: offset above or below the centerline in units of line height, default is 0
 	*/
-	func drawAttributedString(string: NSAttributedString, toContext context:CGContextRef, align alignment:NSTextAlignment = .Center, yOffset:CGFloat = 0, fitWidth:Bool = false) {
+	func drawAttributedString(string: NSAttributedString, toContext context:CGContext, align alignment:NSTextAlignment = .Center, yOffset:CGFloat = 0, fitWidth:Bool = false) {
 		
 		let pathLength = self.length()
 		
@@ -105,7 +105,7 @@ extension BezierPath {
 		
 		for r in 0..<CFArrayGetCount(runs) {
 			
-			let run = unsafeBitCast(CFArrayGetValueAtIndex(runs, r), CTRunRef.self)
+			let run = unsafeBitCast(CFArrayGetValueAtIndex(runs, r), CTRun.self)
 			let runCount = CTRunGetGlyphCount(run)
 			
 			var advances = Array(count: runCount, repeatedValue: CGSizeZero)
@@ -171,7 +171,7 @@ extension BezierPath {
 	
 	/// something approximate ... assume the path is centered and has enough space on top and left to be able to accomodate the text
 	func sizeThatFits() -> CGSize {
-		let bounds = CGPathGetPathBoundingBox(path.CGPath)
+		let bounds = CGPathGetPathBoundingBox(path)
 		let imageSize = CGSizeMake(bounds.midX*2, bounds.midY*2)
 		
 		return imageSize
@@ -182,21 +182,21 @@ extension BezierPath {
 
 class UIBezierLabel: UILabel {
 	
-	/// set the UIBezierPath, BezierPath gets automatically generated
-	var bezierPath: UIBezierPath? {
+	/// set the CGPath, Bezier gets automatically generated
+	var bezierPath: CGPath? {
 		get {
 			return bezier?.path
 		}
 		set {
 			if let path = newValue {
-				bezier = BezierPath(path: path)
+				bezier = Bezier(path: path)
 			} else {
 				bezier = nil
 			}
 		}
 	}
 	
-	var bezier: BezierPath? {
+	var bezier: Bezier? {
 		didSet {
 			self.numberOfLines = 1
 		}

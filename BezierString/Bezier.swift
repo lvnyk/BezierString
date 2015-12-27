@@ -27,7 +27,7 @@ import UIKit
 
 // MARK: Helpers
 
-extension CGPathRef {
+extension CGPath {
 	
 	typealias Applier = @convention(block) (UnsafePointer<CGPathElement>) -> ()
 	func forEach(@noescape applier: Applier) {
@@ -52,7 +52,7 @@ class Box<T> {
 
 /// Contains a list of Bezier Curves
 
-struct BezierPath {
+struct Bezier {
 
 	/// Bezier Curve of the n-th order
 	struct Curve {
@@ -69,18 +69,18 @@ struct BezierPath {
 		}
 	}
 	
-	let path: UIBezierPath
+	let path: CGPath // CGPath used instead of UIBezierPath for its immutability
 	private let curves: [Curve]
 	
 	/// - parameter path: UIBezierPath - preferably continuous
-	init(path: UIBezierPath) {
+	init(path: CGPath) {
 		
 		self.path = path
 		
 		var curves = [Curve]()
 		var last: CGPoint?
 		
-		path.CGPath.forEach({
+		path.forEach({
 			let p = $0.memory
 			switch p.type {
 			case .MoveToPoint:
@@ -113,7 +113,7 @@ struct BezierPath {
 
 // MARK: - BezierCurve
 
-extension BezierPath.Curve {
+extension Bezier.Curve {
 	
 	struct Binomial {
 		private static var c: [[Int]] = [[1]]
@@ -207,7 +207,7 @@ extension BezierPath.Curve {
 		}
 		
 		// Gauss-Legendre quadrature
-		let length = BezierPath.Curve.glvalues[diffs.count.predecessor()].reduce(CGFloat(0.0)) { sum, table in
+		let length = Bezier.Curve.glvalues[diffs.count.predecessor()].reduce(CGFloat(0.0)) { sum, table in
 			let tt = t/2 * (table.abscissa + 1)
 			return sum + t/2 * table.weight * self.d(tt).distanceTo(CGPointZero)
 		}
@@ -272,7 +272,7 @@ extension BezierPath.Curve {
 
 // MARK: - API
 
-extension BezierPath {
+extension Bezier {
 	
 	/// - returns: Total length of the path
 	func length() -> CGFloat {
