@@ -48,7 +48,7 @@ class Box<T> {
 	}
 }
 
-// MARK: - Bezier Path
+// MARK: - Bezier
 
 /// Contains a list of Bezier Curves
 
@@ -69,10 +69,10 @@ struct Bezier {
 		}
 	}
 	
-	let path: CGPath // CGPath used instead of UIBezierPath for its immutability
+	let path: CGPath
 	private let curves: [Curve]
 	
-	/// - parameter path: UIBezierPath - preferably continuous
+	/// - parameter path: CGPath - preferably continuous
 	init(path: CGPath) {
 		
 		self.path = path
@@ -111,7 +111,7 @@ struct Bezier {
 	
 }
 
-// MARK: - BezierCurve
+// MARK: - Bezier Curve
 
 extension Bezier.Curve {
 	
