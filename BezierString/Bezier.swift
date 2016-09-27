@@ -30,14 +30,14 @@ import UIKit
 extension CGPath {
 	
 	typealias Applier = @convention(block) (UnsafePointer<CGPathElement>) -> ()
-	func forEach(@noescape applier: Applier) {
+	func forEach(_ applier: Applier) {
 		
 		let callback: CGPathApplierFunction = { (info, element) in
-			let applier = unsafeBitCast(info, Applier.self)
+			let applier = unsafeBitCast(info, to: Applier.self)
 			applier(element)
 		}
 		
-		CGPathApply(self, unsafeBitCast(applier, UnsafeMutablePointer<Void>.self), callback)
+		self.apply(info: unsafeBitCast(applier, to: UnsafeMutableRawPointer.self), function: callback)
 	}
 }
 
@@ -48,20 +48,20 @@ class Box<T> {
 	}
 }
 
-// MARK: - Bezier
+// MARK: - Bezier Path
 
 /// Contains a list of Bezier Curves
 
 struct Bezier {
-
+	
 	/// Bezier Curve of the n-th order
 	struct Curve {
 		
 		typealias Value = (value: CGFloat, at: CGFloat)
-
+		
 		let points: [CGPoint]
-		private let diffs: [CGPoint]
-		private let cache = Box(value: [Value(0, 0)])
+		fileprivate let diffs: [CGPoint]
+		fileprivate let cache = Box([Value(0, 0)])
 		
 		init(point: CGPoint...) {
 			points = point
@@ -69,10 +69,10 @@ struct Bezier {
 		}
 	}
 	
-	let path: CGPath
-	private let curves: [Curve]
+	let path: CGPath // CGPath used instead of UIBezierPath for its immutability
+	fileprivate let curves: [Curve]
 	
-	/// - parameter path: CGPath - preferably continuous
+	/// - parameter path: UIBezierPath - preferably continuous
 	init(path: CGPath) {
 		
 		self.path = path
@@ -81,26 +81,26 @@ struct Bezier {
 		var last: CGPoint?
 		
 		path.forEach({
-			let p = $0.memory
+			let p = $0.pointee
 			switch p.type {
-			case .MoveToPoint:
+			case .moveToPoint:
 				last = p.points[0]
-			case .AddLineToPoint:
+			case .addLineToPoint:
 				if let first = last {
 					last = p.points[0]
 					curves.append(Curve(point: first, last!))
 				}
-			case .AddQuadCurveToPoint:
+			case .addQuadCurveToPoint:
 				if let first = last {
 					last = p.points[1]
 					curves.append(Curve(point: first, p.points[0], last!))
 				}
-			case .AddCurveToPoint:
+			case .addCurveToPoint:
 				if let first = last {
 					last = p.points[2]
 					curves.append(Curve(point: first, p.points[0], p.points[1], last!))
 				}
-			case .CloseSubpath:
+			case .closeSubpath:
 				last = nil
 				break;
 			}
@@ -111,30 +111,30 @@ struct Bezier {
 	
 }
 
-// MARK: - Bezier Curve
+// MARK: - BezierCurve
 
 extension Bezier.Curve {
 	
 	struct Binomial {
-		private static var c: [[Int]] = [[1]]
+		fileprivate static var c: [[Int]] = [[1]]
 		
 		/// - returns: Binomial Coefficients for the order n
-		static func coefficients(n: Int) -> [Int] {
+		static func coefficients(for n: Int) -> [Int] {
 			if n < Binomial.c.count {
 				return Binomial.c[n]
 			}
 			
-			let prev = coefficients(n.predecessor())
+			let prev = coefficients(for: (n - 1))
 			let new = zip([0]+prev, prev+[0]).map(+)
 			Binomial.c.append(new)
 			return new
 		}
 		
 		/// Sums up the list of items
-		static func sum(list: [CGPoint], t: CGFloat) -> CGPoint {
+		static func sum(_ list: [CGPoint], t: CGFloat) -> CGPoint {
 			let count = CGFloat(list.count)
-			return zip(Binomial.coefficients(list.count.predecessor()), list).enumerate().reduce(CGPointZero) { sum, d in
-				let i = CGFloat(d.index)
+			return zip(Binomial.coefficients(for: list.count - 1), list).enumerated().reduce(CGPoint.zero) { sum, d in
+				let i = CGFloat(d.offset)
 				let b = CGFloat(d.element.0)
 				
 				return sum + pow(t, i)*pow(1-t, count-1-i) * b * d.element.1
@@ -148,7 +148,7 @@ extension Bezier.Curve {
 	- parameter left: left value for initial bisection (only used if no values have been previously cached)
 	- returns: parameter t
 	*/
-	func t(length: CGFloat, left: Value=(0,0)) -> Value {
+	func t(at length: CGFloat, left: Value=(0,0)) -> Value {
 		
 		let length = max(0, min(length, self.length()))
 		
@@ -169,37 +169,37 @@ extension Bezier.Curve {
 	- parameter depth: bisection step number
 	- returns: final value
 	*/
-	func bisect(find: CGFloat, left: Value, right: Value, depth: Int = 0) -> Value {
+	func bisect(_ find: CGFloat, left: Value, right: Value, depth: Int = 0) -> Value {
 		
 		let split = (find-left.value)/(right.value-left.value)	// 0...1
 		let t     = (left.at*(1-split) + right.at*(split))		// search for the solution closer to the boundary that it is nearer to
 		
-		let guess = Value(self.length(t), t)
+		let guess = Value(self.length(at: t), t)
 		
 		if abs(find-guess.value) < 0.15 || depth > 10 {
 			return guess
 		}
 		
 		if guess.value < find {
-			return bisect(find, left: guess, right: right, depth: depth.successor())
+			return bisect(find, left: guess, right: right, depth: (depth + 1))
 		} else {
-			return bisect(find, left: left,  right: guess, depth: depth.successor())
+			return bisect(find, left: left,  right: guess, depth: (depth + 1))
 		}
 	}
 	
 	/// - returns: Derivative of the curve at t
-	func d(t:CGFloat) -> CGPoint {
+	func d(at t:CGFloat) -> CGPoint {
 		return Binomial.sum(diffs, t: t) * CGFloat(diffs.count)
 	}
 	
 	/// - returns: Location on the curve at t
-	func position(t: CGFloat) -> CGPoint {
+	func position(at t: CGFloat) -> CGPoint {
 		return Binomial.sum(points, t: t)
 	}
 	
 	/// Calculated using the [Gauss-Legendre quadrature](http://pomax.github.io/bezierinfo/legendre-gauss.html)
 	/// - returns: Length of the curve at t
-	func length(t: CGFloat=1) -> CGFloat {
+	func length(at t: CGFloat=1) -> CGFloat {
 		
 		let t = max(0, min(t, 1))
 		if let length = cache.value.lazy.filter({$0.at==t}).first {
@@ -207,18 +207,18 @@ extension Bezier.Curve {
 		}
 		
 		// Gauss-Legendre quadrature
-		let length = Bezier.Curve.glvalues[diffs.count.predecessor()].reduce(CGFloat(0.0)) { sum, table in
+		let length = Bezier.Curve.glvalues[(diffs.count - 1)].reduce(CGFloat(0.0)) { sum, table in
 			let tt = t/2 * (table.abscissa + 1)
-			return sum + t/2 * table.weight * self.d(tt).distanceTo(CGPointZero)
+			return sum + t/2 * table.weight * self.d(at: tt).distanceTo(CGPoint.zero)
 		}
 		
-		cache.value.insert((length, t), atIndex: cache.value.indexOf { $0.at>t } ?? cache.value.endIndex) // keep it sorted
+		cache.value.insert((length, t), at: cache.value.index { $0.at>t } ?? cache.value.endIndex) // keep it sorted
 		
 		return length
 	}
 	
 	/// [Weight and abscissa](http://pomax.github.io/bezierinfo/legendre-gauss.html) values
-	private static let glvalues:[[(weight: CGFloat, abscissa: CGFloat)]] = [
+	fileprivate static let glvalues:[[(weight: CGFloat, abscissa: CGFloat)]] = [
 		[	// line - 2
 			(1.0000000000000000, -0.5773502691896257),
 			(1.0000000000000000,  0.5773502691896257)
@@ -283,14 +283,14 @@ extension Bezier {
 	
 	/// - returns: Path properties (position and normal) at given length.
 	/// nil if out of bounds
-	func propertiesAt(length: CGFloat) -> (position: CGPoint, normal: CGFloat)? {
+	func properties(at length: CGFloat) -> (position: CGPoint, normal: CGFloat)? {
 		var length = length
 		for curve in curves {
 			let l = curve.length()
 			if length <= l {
-				let t   = curve.t(length).at
-				let pos = curve.position(t)
-				let rot = curve.d(t)
+				let t   = curve.t(at: length).at
+				let pos = curve.position(at: t)
+				let rot = curve.d(at: t)
 				
 				return (pos, atan2(rot.y, rot.x))
 			}

@@ -36,27 +36,30 @@ extension Bezier {
 	- parameter string: NSAttributed string to be drawn on the context
 	- parameter context: context to be drawn on
 	- parameter align: text alignment, default is .Center
-	- parameter yOffset: offset above or below the centerline in units of line height, default is 0
+	- parameter y: y offset above or below the centerline in units of line height, default is 0
 	*/
-	func drawAttributedString(string: NSAttributedString, toContext context:CGContext, align alignment:NSTextAlignment = .Center, yOffset:CGFloat = 0, fitWidth:Bool = false) {
+	func draw(attributed string: NSAttributedString,
+	          to context: CGContext,
+	          align alignment: NSTextAlignment = .center,
+	          y offset: CGFloat = 0, fitWidth: Bool = false) {
 		
 		let pathLength = self.length()
 		
-		CGContextSaveGState(context)
+		context.saveGState()
 		
-		CGContextSetAllowsFontSmoothing(context, true)
-		CGContextSetShouldSmoothFonts(context, true)
+		context.setAllowsFontSmoothing(true)
+		context.setShouldSmoothFonts(true)
 		
-		CGContextSetAllowsFontSubpixelPositioning(context, true)
-		CGContextSetShouldSubpixelPositionFonts(context, true)
+		context.setAllowsFontSubpixelPositioning(true)
+		context.setShouldSubpixelPositionFonts(true)
 		
-		CGContextSetAllowsFontSubpixelQuantization(context, true)
-		CGContextSetShouldSubpixelQuantizeFonts(context, true)
+		context.setAllowsFontSubpixelQuantization(true)
+		context.setShouldSubpixelQuantizeFonts(true)
 		
-		CGContextSetAllowsAntialiasing(context, true)
-		CGContextSetShouldAntialias(context, true)
+		context.setAllowsAntialiasing(true)
+		context.setShouldAntialias(true)
 		
-		CGContextSetInterpolationQuality(context, CGInterpolationQuality.High)
+		context.interpolationQuality = CGInterpolationQuality.high
 		
 		let line = CTLineCreateWithAttributedString(string)
 		let runs = CTLineGetGlyphRuns(line)
@@ -65,7 +68,7 @@ extension Bezier {
 		let charSpacing: CGFloat
 		let align: NSTextAlignment
 		
-		var ascent = Array(count: 3, repeatedValue: CGFloat(0))
+		var ascent = Array(repeating: CGFloat(0), count: 3)
 		let stringWidth = CGFloat(CTLineGetTypographicBounds(line, &ascent[0], &ascent[1], &ascent[2]))
 		let height = ascent[0]-ascent[1]*2+ascent[2]*2
 		
@@ -80,19 +83,19 @@ extension Bezier {
 		}
 		
 		if spaceRemaining < 0 {
-			align = NSTextAlignment.Justified
+			align = .justified
 		} else {
 			align = alignment
 		}
 		
 		switch align {
-		case .Center:
+		case .center:
 			linePos = spaceRemaining / 2
 			charSpacing = 0
-		case .Right:
+		case .right:
 			linePos = spaceRemaining
 			charSpacing = 0
-		case .Justified:
+		case .justified:
 			charSpacing = spaceRemaining / CGFloat(max(2,string.length-1))
 			if string.length==1 {
 				linePos = charSpacing
@@ -105,30 +108,26 @@ extension Bezier {
 		
 		for r in 0..<CFArrayGetCount(runs) {
 			
-			let run = unsafeBitCast(CFArrayGetValueAtIndex(runs, r), CTRun.self)
+			let run = unsafeBitCast(CFArrayGetValueAtIndex(runs, r), to: CTRun.self)
 			let runCount = CTRunGetGlyphCount(run)
 			
-			var advances = Array(count: runCount, repeatedValue: CGSizeZero)
+			var advances = Array(repeating: CGSize.zero, count: runCount)
 			CTRunGetAdvances(run, CFRangeMake(0, runCount), &advances)
 			
-			for (i, advance) in advances.enumerate() {
+			for (i, advance) in advances.enumerated() {
 				
 				let width = advance.width
 				let length = linePos + width/2
 				
-				guard let p = self.propertiesAt(length) else { break }
+				guard let p = self.properties(at: length) else { break }
 				
-				let textTransform = CGAffineTransformConcat(CGAffineTransformMakeScale(1, -1),
-					CGAffineTransformConcat(
-						CGAffineTransformMakeTranslation(-glyphOffset-width/2/scale, height*(0.5+yOffset)),
-						CGAffineTransformConcat(
-							CGAffineTransformMakeScale(scale, scale),
-							CGAffineTransformConcat(
-								CGAffineTransformMakeRotation(p.normal),
-								CGAffineTransformMakeTranslation(p.position.x, p.position.y)
-							) ) ) )
+				let textTransform = CGAffineTransform(scaleX: 1, y: -1)
+					.concatenating(CGAffineTransform(translationX: -glyphOffset-width/2/scale, y: height*(0.5+offset))
+						.concatenating(CGAffineTransform(scaleX: scale, y: scale)
+							.concatenating(CGAffineTransform(rotationAngle: p.normal)
+								.concatenating(CGAffineTransform(translationX: p.position.x, y: p.position.y)))))
 				
-				CGContextSetTextMatrix(context, textTransform)
+				context.textMatrix = textTransform
 				
 				CTRunDraw(run, context, CFRangeMake(i, 1))
 				
@@ -137,7 +136,7 @@ extension Bezier {
 			}
 		}
 		
-		CGContextRestoreGState(context)
+		context.restoreGState()
 	}
 	
 	/**
@@ -146,11 +145,14 @@ extension Bezier {
 	- parameter string: NSAttributed string to be rendered
 	- parameter imageSize: size of the image to be returned. If nil, twice the size to the center of the path is used
 	- parameter align: text alignment, default is .Center
-	- parameter yOffset: offset above or below the centerline in units of line height, default is 0
+	- parameter y: offset above or below the centerline in units of line height, default is 0
 	
 	- returns: UIImage containing the provided string following the bezier path
 	*/
-	func imageWithAttributedString(string: NSAttributedString, imageSize: CGSize? = nil, align alignment: NSTextAlignment = .Center, yOffset:CGFloat = 0, fitWidth: Bool = false) -> UIImage? {
+	func image(withAttributed string: NSAttributedString,
+	           size imageSize: CGSize? = nil,
+	           align alignment: NSTextAlignment = .center,
+	           y offset: CGFloat = 0, fitWidth: Bool = false) -> UIImage? {
 		
 		let imageSize = imageSize ?? self.sizeThatFits()
 		
@@ -161,7 +163,7 @@ extension Bezier {
 		UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
 		
 		guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
-		self.drawAttributedString(string, toContext: ctx, align: alignment, yOffset: yOffset, fitWidth: fitWidth)
+		self.draw(attributed: string, to: ctx, align: alignment, y: offset, fitWidth: fitWidth)
 		
 		let image = UIGraphicsGetImageFromCurrentImageContext()
 		UIGraphicsEndImageContext()
@@ -171,8 +173,8 @@ extension Bezier {
 	
 	/// something approximate ... assume the path is centered and has enough space on top and left to be able to accomodate the text
 	func sizeThatFits() -> CGSize {
-		let bounds = CGPathGetPathBoundingBox(path)
-		let imageSize = CGSizeMake(bounds.midX*2, bounds.midY*2)
+		let bounds = path.boundingBoxOfPath
+		let imageSize = CGSize(width: bounds.midX*2, height: bounds.midY*2)
 		
 		return imageSize
 	}
@@ -201,13 +203,13 @@ class UIBezierLabel: UILabel {
 			self.numberOfLines = 1
 		}
 	}
-
+	
 	/// y offset offset above or below the centerline in units of line height, default is 0
 	var textPathOffset: CGFloat = 0
 	
 	
 	// .Justify doesn't work on UILabels
-	private var _textAlignment: NSTextAlignment = NSTextAlignment.Left
+	fileprivate var _textAlignment: NSTextAlignment = .left
 	override var textAlignment: NSTextAlignment {
 		willSet {
 			_textAlignment = newValue
@@ -222,16 +224,16 @@ class UIBezierLabel: UILabel {
 		super.init(coder: aDecoder)
 	}
 	
-	override func drawRect(rect: CGRect) {
-		if let bezier = bezier, text = self.attributedText, ctx = UIGraphicsGetCurrentContext() {
-			bezier.drawAttributedString(text, toContext: ctx, align: _textAlignment, yOffset: textPathOffset, fitWidth: adjustsFontSizeToFitWidth)
+	override func draw(_ rect: CGRect) {
+		if let bezier = bezier, let string = self.attributedText, let ctx = UIGraphicsGetCurrentContext() {
+			bezier.draw(attributed: string, to: ctx, align: _textAlignment, y: textPathOffset, fitWidth: adjustsFontSizeToFitWidth)
 		} else {
-			super.drawRect(rect)
+			super.draw(rect)
 		}
 	}
 	
 	/// works according to the dimensions of the bezier path, not the text
-	override func sizeThatFits(size: CGSize) -> CGSize {
+	override func sizeThatFits(_ size: CGSize) -> CGSize {
 		if let bezier = bezier {
 			return bezier.sizeThatFits()
 		}
