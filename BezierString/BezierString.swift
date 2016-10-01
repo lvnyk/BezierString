@@ -111,12 +111,14 @@ extension Bezier {
 			let run = unsafeBitCast(CFArrayGetValueAtIndex(runs, r), to: CTRun.self)
 			let runCount = CTRunGetGlyphCount(run)
 			
+			let kern = (CTRunGetAttributes(run) as? [String:Any])?[NSKernAttributeName] as? CGFloat ?? 0
+			
 			var advances = Array(repeating: CGSize.zero, count: runCount)
 			CTRunGetAdvances(run, CFRangeMake(0, runCount), &advances)
 			
 			for (i, advance) in advances.enumerated() {
 				
-				let width = advance.width
+				let width = advance.width-kern
 				let length = linePos + width/2
 				
 				guard let p = self.properties(at: length) else { break }
@@ -131,8 +133,8 @@ extension Bezier {
 				
 				CTRunDraw(run, context, CFRangeMake(i, 1))
 				
-				glyphOffset += width
-				linePos += (charSpacing + width) * scale
+				glyphOffset += width + kern
+				linePos += (charSpacing + width + kern) * scale
 			}
 		}
 		

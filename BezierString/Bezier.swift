@@ -61,7 +61,7 @@ struct Bezier {
 		
 		let points: [CGPoint]
 		fileprivate let diffs: [CGPoint]
-		fileprivate let cache = Box([Value(0, 0)])
+		fileprivate let cache = Box(value: [Value(0, 0)])
 		
 		init(point: CGPoint...) {
 			points = point
