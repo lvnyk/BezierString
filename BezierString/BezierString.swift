@@ -25,74 +25,10 @@
 
 import UIKit
 
-class BezierString {
-	
-	let bezierPath: UIBezierPath
-	let samples: [(point: CGPoint, length: CGFloat, angle: CGFloat)]
-	
-	init( bezierPath: UIBezierPath ) {
-		
-		self.bezierPath = bezierPath
-		
-		var prevPoint = (point: CGPointZero, length: CGFloat(0.0), angle: CGFloat(0.0))
-		var firstSample = true
-		self.samples = bezierPath.sample().map {
-			p -> (point: CGPoint, length: CGFloat, angle: CGFloat) in
-			
-			if firstSample {
-				prevPoint.point = p
-				firstSample = false
-			}
-			prevPoint.length += p.distanceTo(prevPoint.point)
-			prevPoint.angle = atan2(p.y-prevPoint.point.y, p.x-prevPoint.point.x)
-			prevPoint.point = p
-			
-			return prevPoint
-		}
-	}
-	
-	// MARK: -
-	
-	private func angleAtLength(length: CGFloat) -> CGFloat {
-		
-		for var i=1; i<samples.count; i++ {
-			
-			if length < samples[i].length || i==samples.count-1 {
-				
-				if length < samples[i-1].length + (samples[i].length-samples[i-1].length)/2 { i-- }
-				
-				if i == 0 { return samples[1].angle }
-				if i >= samples.count-1 { return samples.last!.angle }
+// MARK: Rendering
 
-				let len1 = (samples[i].length-samples[i-1].length)/2
-				let len2 = (samples[i+1].length-samples[i].length)/2
-
-				let length = length - (samples[i-1].length + len1)
-
-				let deltaAngle = arcFi(samples[i+1].angle, fi2: samples[i].angle)
-				let orientation = compareAngles(samples[i+1].angle-CGFloat.Pi/2, fi1: samples[i+1].angle, fi2: samples[i].angle) > 0 ? -1 : 1
-				
-				return samples[i].angle + deltaAngle * CGFloat(orientation) * (min(1, length/len1) + max(0, (length-len1)/len2)) / 2
-			}
-		}
-		
-		return 0
-	}
-	
-	private func pointAtLength(length: CGFloat) -> CGPoint {
-		for var i=1; i<samples.count; i++ {
-			if length < samples[i].length || i==samples.count-1 {
-				let length = length - samples[i-1].length
-				
-				return samples[i-1].point + (samples[i].point-samples[i-1].point) * (length / (samples[i].length - samples[i-1].length))
-			}
-		}
-		
-		return CGPointZero
-	}
-	
-	
-	// MARK: -
+/// Text rendering extension
+extension Bezier {
 	
 	/**
 	Adds the string to the provided context, following the bezier path
@@ -100,27 +36,30 @@ class BezierString {
 	- parameter string: NSAttributed string to be drawn on the context
 	- parameter context: context to be drawn on
 	- parameter align: text alignment, default is .Center
-	- parameter yOffset: offset above or below the centerline in units of line height, default is 0
+	- parameter y: y offset above or below the centerline in units of line height, default is 0
 	*/
-	func drawAttributedString(string: NSAttributedString, toContext context:CGContextRef, align alignment:NSTextAlignment = .Center, yOffset:CGFloat = 0, fitWidth:Bool = false) {
+	func draw(attributed string: NSAttributedString,
+	          to context: CGContext,
+	          align alignment: NSTextAlignment = .center,
+	          y offset: CGFloat = 0, fitWidth: Bool = false) {
 		
-		guard let lastSample = samples.last else { return }
+		let pathLength = self.length()
 		
-		CGContextSaveGState(context)
+		context.saveGState()
 		
-		CGContextSetAllowsFontSmoothing(context, true)
-		CGContextSetShouldSmoothFonts(context, true)
+		context.setAllowsFontSmoothing(true)
+		context.setShouldSmoothFonts(true)
 		
-		CGContextSetAllowsFontSubpixelPositioning(context, true)
-		CGContextSetShouldSubpixelPositionFonts(context, true)
+		context.setAllowsFontSubpixelPositioning(true)
+		context.setShouldSubpixelPositionFonts(true)
 		
-		CGContextSetAllowsFontSubpixelQuantization(context, true)
-		CGContextSetShouldSubpixelQuantizeFonts(context, true)
+		context.setAllowsFontSubpixelQuantization(true)
+		context.setShouldSubpixelQuantizeFonts(true)
 		
-		CGContextSetAllowsAntialiasing(context, true)
-		CGContextSetShouldAntialias(context, true)
+		context.setAllowsAntialiasing(true)
+		context.setShouldAntialias(true)
 		
-		CGContextSetInterpolationQuality(context, CGInterpolationQuality.High)
+		context.interpolationQuality = CGInterpolationQuality.high
 		
 		let line = CTLineCreateWithAttributedString(string)
 		let runs = CTLineGetGlyphRuns(line)
@@ -129,35 +68,34 @@ class BezierString {
 		let charSpacing: CGFloat
 		let align: NSTextAlignment
 		
-		let ascent = UnsafeMutablePointer<CGFloat>(malloc((sizeof(CGFloat)*3)))
+		var ascent = Array(repeating: CGFloat(0), count: 3)
 		let stringWidth = CGFloat(CTLineGetTypographicBounds(line, &ascent[0], &ascent[1], &ascent[2]))
 		let height = ascent[0]-ascent[1]*2+ascent[2]*2
-		free(ascent)
 		
 		let scale: CGFloat
 		let spaceRemaining: CGFloat
-		if fitWidth && lastSample.length < stringWidth {
+		if fitWidth && pathLength < stringWidth {
 			spaceRemaining = 0
-			scale = min(1, lastSample.length / stringWidth)
+			scale = min(1, pathLength / stringWidth)
 		} else {
-			spaceRemaining = lastSample.length - stringWidth
+			spaceRemaining = pathLength - stringWidth
 			scale = 1
 		}
-
+		
 		if spaceRemaining < 0 {
-			align = NSTextAlignment.Justified
+			align = .justified
 		} else {
 			align = alignment
 		}
 		
 		switch align {
-		case .Center:
+		case .center:
 			linePos = spaceRemaining / 2
 			charSpacing = 0
-		case .Right:
+		case .right:
 			linePos = spaceRemaining
 			charSpacing = 0
-		case .Justified:
+		case .justified:
 			charSpacing = spaceRemaining / CGFloat(max(2,string.length-1))
 			if string.length==1 {
 				linePos = charSpacing
@@ -169,54 +107,54 @@ class BezierString {
 		var glyphOffset:CGFloat = 0
 		
 		for r in 0..<CFArrayGetCount(runs) {
-	
-			let run = unsafeBitCast(CFArrayGetValueAtIndex(runs, r), CTRunRef.self)
+			
+			let run = unsafeBitCast(CFArrayGetValueAtIndex(runs, r), to: CTRun.self)
 			let runCount = CTRunGetGlyphCount(run)
 			
-			let advances = UnsafeMutablePointer<CGSize>(malloc((sizeof(CGSize))*runCount))
+			let kern = (CTRunGetAttributes(run) as? [String:Any])?[NSKernAttributeName] as? CGFloat ?? 0
 			
-			CTRunGetAdvances(run, CFRangeMake(0, runCount), advances)
+			var advances = Array(repeating: CGSize.zero, count: runCount)
+			CTRunGetAdvances(run, CFRange(location: 0, length: runCount), &advances)
 			
-			for var i=0; i<runCount; i++ {
-			
-				let position = self.pointAtLength(linePos + advances[i].width/2)
-				let rotation = self.angleAtLength(linePos + advances[i].width/2)
+			for (i, advance) in advances.enumerated() {
 				
-				let textTransform = CGAffineTransformConcat(CGAffineTransformMakeScale(1, -1),
-					CGAffineTransformConcat(
-						CGAffineTransformMakeTranslation(-glyphOffset-advances[i].width/2/scale, height*(0.5+yOffset)),
-						CGAffineTransformConcat(
-							CGAffineTransformMakeScale(scale, scale),
-							CGAffineTransformConcat(
-								CGAffineTransformMakeRotation(rotation),
-								CGAffineTransformMakeTranslation(position.x, position.y)
-							) ) ) )
+				let width = advance.width-kern
+				let length = linePos + width/2
 				
-				CGContextSetTextMatrix(context, textTransform)
+				guard let p = self.properties(at: length) else { break }
 				
-				CTRunDraw(run, context, CFRangeMake(i, 1))
+				let textTransform = CGAffineTransform(scaleX: 1, y: -1)
+					.concatenating(CGAffineTransform(translationX: -glyphOffset-width/2/scale, y: height*(0.5+offset))
+						.concatenating(CGAffineTransform(scaleX: scale, y: scale)
+							.concatenating(CGAffineTransform(rotationAngle: p.normal)
+								.concatenating(CGAffineTransform(translationX: p.position.x, y: p.position.y)))))
 				
-				glyphOffset += advances[i].width
-				linePos += (charSpacing + advances[i].width) * scale
+				context.textMatrix = textTransform
+				
+				CTRunDraw(run, context, CFRange(location: i, length: 1))
+				
+				glyphOffset += width + kern
+				linePos += (charSpacing + width + kern) * scale
 			}
-			
-			free(advances)
 		}
 		
-		CGContextRestoreGState(context)
+		context.restoreGState()
 	}
-
+	
 	/**
 	Generates an image containing the string following the bezier path
 	
 	- parameter string: NSAttributed string to be rendered
 	- parameter imageSize: size of the image to be returned. If nil, twice the size to the center of the path is used
 	- parameter align: text alignment, default is .Center
-	- parameter yOffset: offset above or below the centerline in units of line height, default is 0
+	- parameter y: offset above or below the centerline in units of line height, default is 0
 	
 	- returns: UIImage containing the provided string following the bezier path
 	*/
-	func imageWithAttributedString(string: NSAttributedString, imageSize: CGSize? = nil, align alignment: NSTextAlignment = .Center, yOffset:CGFloat = 0, fitWidth: Bool = false) -> UIImage? {
+	func image(withAttributed string: NSAttributedString,
+	           size imageSize: CGSize? = nil,
+	           align alignment: NSTextAlignment = .center,
+	           y offset: CGFloat = 0, fitWidth: Bool = false) -> UIImage? {
 		
 		let imageSize = imageSize ?? self.sizeThatFits()
 		
@@ -227,7 +165,7 @@ class BezierString {
 		UIGraphicsBeginImageContextWithOptions(imageSize, false, 0)
 		
 		guard let ctx = UIGraphicsGetCurrentContext() else { return nil }
-		self.drawAttributedString(string, toContext: ctx, align: alignment, yOffset: yOffset, fitWidth: fitWidth)
+		self.draw(attributed: string, to: ctx, align: alignment, y: offset, fitWidth: fitWidth)
 		
 		let image = UIGraphicsGetImageFromCurrentImageContext()
 		UIGraphicsEndImageContext()
@@ -237,41 +175,43 @@ class BezierString {
 	
 	/// something approximate ... assume the path is centered and has enough space on top and left to be able to accomodate the text
 	func sizeThatFits() -> CGSize {
-		let bounds = CGPathGetPathBoundingBox(bezierPath.CGPath)
-		let imageSize = CGSizeMake(bounds.midX*2, bounds.midY*2)
+		let bounds = path.boundingBoxOfPath
+		let imageSize = CGSize(width: bounds.midX*2, height: bounds.midY*2)
 		
 		return imageSize
 	}
 }
 
+// MARK: - Label
+
 class UIBezierLabel: UILabel {
 	
-	/// set the UIBezierPath, BezierString gets automatically generated
-	var bezierPath: UIBezierPath? {
+	/// set the CGPath, Bezier gets automatically generated
+	var bezierPath: CGPath? {
 		get {
-			return bezierString?.bezierPath
+			return bezier?.path
 		}
 		set {
 			if let path = newValue {
-				bezierString = BezierString(bezierPath: path)
+				bezier = Bezier(path: path)
 			} else {
-				bezierString = nil
+				bezier = nil
 			}
 		}
 	}
 	
-	var bezierString: BezierString? {
+	var bezier: Bezier? {
 		didSet {
 			self.numberOfLines = 1
 		}
 	}
-
+	
 	/// y offset offset above or below the centerline in units of line height, default is 0
 	var textPathOffset: CGFloat = 0
 	
 	
 	// .Justify doesn't work on UILabels
-	private var _textAlignment: NSTextAlignment = NSTextAlignment.Left
+	private var _textAlignment: NSTextAlignment = .left
 	override var textAlignment: NSTextAlignment {
 		willSet {
 			_textAlignment = newValue
@@ -286,18 +226,18 @@ class UIBezierLabel: UILabel {
 		super.init(coder: aDecoder)
 	}
 	
-	override func drawRect(rect: CGRect) {
-		if let bezierString = bezierString, text = self.attributedText, ctx = UIGraphicsGetCurrentContext() {
-			bezierString.drawAttributedString(text, toContext: ctx, align: _textAlignment, yOffset: textPathOffset, fitWidth: adjustsFontSizeToFitWidth)
+	override func draw(_ rect: CGRect) {
+		if let bezier = bezier, let string = self.attributedText, let ctx = UIGraphicsGetCurrentContext() {
+			bezier.draw(attributed: string, to: ctx, align: _textAlignment, y: textPathOffset, fitWidth: adjustsFontSizeToFitWidth)
 		} else {
-			super.drawRect(rect)
+			super.draw(rect)
 		}
 	}
 	
 	/// works according to the dimensions of the bezier path, not the text
-	override func sizeThatFits(size: CGSize) -> CGSize {
-		if let bezierString = bezierString {
-			return bezierString.sizeThatFits()
+	override func sizeThatFits(_ size: CGSize) -> CGSize {
+		if let bezier = bezier {
+			return bezier.sizeThatFits()
 		}
 		
 		return super.sizeThatFits(size)
