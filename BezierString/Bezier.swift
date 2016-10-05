@@ -116,7 +116,7 @@ struct Bezier {
 extension Bezier.Curve {
 	
 	struct Binomial {
-		fileprivate static var c: [[Int]] = [[1]]
+		private static var c = [[1]]
 		
 		/// - returns: Binomial Coefficients for the order n
 		static func coefficients(for n: Int) -> [Int] {
@@ -209,7 +209,7 @@ extension Bezier.Curve {
 		// Gauss-Legendre quadrature
 		let length = Bezier.Curve.glvalues[(diffs.count - 1)].reduce(CGFloat(0.0)) { sum, table in
 			let tt = t/2 * (table.abscissa + 1)
-			return sum + t/2 * table.weight * self.d(at: tt).distanceTo(CGPoint.zero)
+			return sum + t/2 * table.weight * self.d(at: tt).distanceTo(.zero)
 		}
 		
 		cache.value.insert((length, t), at: cache.value.index { $0.at>t } ?? cache.value.endIndex) // keep it sorted
@@ -218,7 +218,7 @@ extension Bezier.Curve {
 	}
 	
 	/// [Weight and abscissa](http://pomax.github.io/bezierinfo/legendre-gauss.html) values
-	fileprivate static let glvalues:[[(weight: CGFloat, abscissa: CGFloat)]] = [
+	private static let glvalues:[[(weight: CGFloat, abscissa: CGFloat)]] = [
 		[	// line - 2
 			(1.0000000000000000, -0.5773502691896257),
 			(1.0000000000000000,  0.5773502691896257)

@@ -114,7 +114,7 @@ extension Bezier {
 			let kern = (CTRunGetAttributes(run) as? [String:Any])?[NSKernAttributeName] as? CGFloat ?? 0
 			
 			var advances = Array(repeating: CGSize.zero, count: runCount)
-			CTRunGetAdvances(run, CFRangeMake(0, runCount), &advances)
+			CTRunGetAdvances(run, CFRange(location: 0, length: runCount), &advances)
 			
 			for (i, advance) in advances.enumerated() {
 				
@@ -131,7 +131,7 @@ extension Bezier {
 				
 				context.textMatrix = textTransform
 				
-				CTRunDraw(run, context, CFRangeMake(i, 1))
+				CTRunDraw(run, context, CFRange(location: i, length: 1))
 				
 				glyphOffset += width + kern
 				linePos += (charSpacing + width + kern) * scale
@@ -211,7 +211,7 @@ class UIBezierLabel: UILabel {
 	
 	
 	// .Justify doesn't work on UILabels
-	fileprivate var _textAlignment: NSTextAlignment = .left
+	private var _textAlignment: NSTextAlignment = .left
 	override var textAlignment: NSTextAlignment {
 		willSet {
 			_textAlignment = newValue
