@@ -75,7 +75,7 @@ struct Bezier {
     }
     
     let path: CGPath // CGPath used instead of UIBezierPath for its immutability
-    fileprivate let paths: [Path]
+    let paths: [Path]
     
     /// - parameter path: UIBezierPath - preferably continuous
     init(path: CGPath) {
